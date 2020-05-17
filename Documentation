@@ -1,0 +1,38 @@
+CONTENERS VS IMAGES
+images are like VMs, ther exist but are not active. You create a contener with an image to do you things, so you can have several conteners with the same image
+
+FOR LONG TASKS DO:
+echo "command" > run.sh
+chmod +x run.sh
+
+BECAUSE:
+create file that will automatically run the command, but needs to me made executable with chmod
+
+TO BUILD:
+docker build -t "name" .
+
+-t helps give a name to the built image and the point is because the Dockerfile is directly in this place (if it's not, write the path to the Dockerfile)
+
+SEE IMAGES
+(sudo) docker images
+
+IF ERROR:
+ERRO[0000] failed to dial gRPC: cannot connect to the Docker daemon. Is 'docker daemon' running on this host?: dial unix /var/run/docker.sock: connect: permission denied
+
+DO:
+sudo systemctl status docker
+sudo systemctl start docker
+
+BECAUSE:
+Docker has just been installed so the docker demon is not up yet (a demon is an ongoing process that connects you to different websites and help launch gthe build process). So you check if it's running, and if it's not you launch it.
+
+IF ERROR:
+Got permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Post http://%2Fvar%2Frun%2Fdocker.sock/v1.40/build?buildargs=%7B%7D&cachefrom=%5B%5D&cgroupparent=&cpuperiod=0&cpuquota=0&cpusetcpus=&cpusetmems=&cpushares=0&dockerfile=Dockerfile&labels=%7B%7D&memory=0&memswap=0&networkmode=default&rm=1&session=mw8blk3nkiul79l9q3lyhmjab&shmsize=0&t=hello&target=&ulimits=null&version=1: dial unix /var/run/docker.sock: connect: permission denied
+
+DO:
+sudo 'command'
+OR
+sudo usermod -a -G docker 'username'
+
+BECAUSE:
+it means that the user doesn't have the rights to exevute the command. Either sudo promotes you to toot admin or the other line adds you to the docker group
