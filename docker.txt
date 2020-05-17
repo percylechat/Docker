@@ -1,0 +1,81 @@
+###installation :
+curl -sSL https://get.docker.com/ubuntu/ | sudo sh
+
+##########---RUN---##########
+
+###run (/bin/bash seems to be implied ?)
+sudo docker run -t -i -p 8000:8000 choual/ubuntu14.04  /bin/bash
+
+###mapper les ports
+docker run -p <host_port1>:<container_port1> -p <host_port2>:<container_port2>
+
+docker run -t -i -p 5000:5000 bussiere/db_biotech    /bin/bash
+
+docker run -t -i -p 9000:8000 -p 3000:3000 choual/ubuntu14.04  /bin/bash
+
+###mapper des systemes de fichier (dossier partagé)
+###le repertoire DOIT exister sur la machine mais ne PEUT PAS exister dans le conteneur
+sudo docker run -t -i -v [local path]:[contene_path] -p 80:80 ubuntu14.04/biotechbourse /bin/bash
+
+sudo docker run -t -i -v /home/tunnel/Docker/DockerSacha/exportsql:/home/export -p 80:80 ubuntu14.04/biotechbourse /bin/bash
+
+This will mount the host directory, /src/webapp, into the container at /opt/webapp
+
+###stopper un conteneur depuis la machine
+docker stop [contener_id]
+
+###Entrer dans un conteneur qui tourne
+docker exec -it fb33cafb4be6  bash
+
+##########---COMMIT / SAVE / LOAD---##########
+
+###liste des conteneurs tournant ou ayant tourné
+docker ps -a
+docker ps -a | grep 60afe4036d97
+
+###liste des conteneurs tournant actuellement
+docker ps
+
+###liste des images en local
+docker images
+
+###commit to image
+sudo docker commit -m="Added json gem" -a="bussiere" 0b2616b0e5a8 picsou/ubuntu14.04
+
+docker commit -m="Added json gem" -a="bussiere" 0b2616b0e5a8 bussiere/db_biotech
+
+docker commit -m="Added json gem" -a="bussiere" b72720a1a6d2 choual/ubuntu14.0
+
+###supprimer une image
+docker rmi <imageid>
+
+###supprimer un conteneur des archives (exit et supprime, avoir commité avant)
+docker rm <containerid>
+
+### sauver dans un fichier
+docker save picsou/ubuntu14.04 > /tmp/mynewimage.tar
+
+###charger image a partier d'un fichier plat
+docker load < /tmp/mynewimage.tar
+
+
+##########---CONFIGURATION---##########
+
+### fichier de conf (maximum conteneurs par défaut : 10Go)
+dans :
+/etc/default/docker
+dm.basesize=40G
+
+###ou sont sotckés les conteneurs
+config file :
+ vi /etc/default/docker
+DOCKER_OPTS="-g /media/bussiere/87bc25b3-c47e-47eb-abb1-4d3ae7d484792/docker/"
+
+###dockerfile (named Dockerfile) :
+docker build -t [image_name] [directory_where_dockerfile]
+docker build -t shykes/myapp .
+
+
+
+
+
