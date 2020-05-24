@@ -74,8 +74,3 @@ DOCKER_OPTS="-g /media/bussiere/87bc25b3-c47e-47eb-abb1-4d3ae7d484792/docker/"
 ###dockerfile (named Dockerfile) :
 docker build -t [image_name] [directory_where_dockerfile]
 docker build -t shykes/myapp .
-
-
-
-
-

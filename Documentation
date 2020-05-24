@@ -1,5 +1,7 @@
+SEE https://docs.docker.com/engine/reference/run/#detached-vs-foreground
+
 CONTENERS VS IMAGES
-images are like VMs, ther exist but are not active. You create a contener with an image to do you things, so you can have several conteners with the same image
+images are like VMs, they exist but are not active. You create a contener with an image to do your things, so you can have several conteners with the same image
 
 FOR LONG TASKS DO:
 echo "command" > run.sh
@@ -15,6 +17,57 @@ docker build -t "name" .
 
 SEE IMAGES
 (sudo) docker images
+
+DESTROY IMAGE:
+docker rmi -f hello
+rmi: remove image name of image
+-f force destruction if image is used somewhere else
+
+TO RUN:
+docker run -t -i -p 8000:8000 budal/hello /bin/bash OR & OR -d
+docker run OPTIONS PORTS NAME COMMAND TO LAUNCH AT RUN
+-t alias TTY, maps stdin, stdout, detached
+-i same but for input
+PORTS: first computer, second docker
+NAME: login on dockerhub/ name given to the docker at building, can also be the version with :latest for example
+-d detached, is not dependent to running terminal
+same for & but is an UNIX feature
+/bin/bash, command launched in the docker
+
+SEE CONTENERS:
+docker ps -a
+-a see former conteners
+
+GO IN DOCKER:
+docker exec -it 5449c44b0708 bash
+docker exec OPTIONS CONTENER ID COMMAND
+
+SAVE CONTENER:
+docker commit -m="saving toto file" -a="budal" f53a54ba343e budal/hello
+-m message of commit
+-a is user name
+f53 id contener id (instance)
+built name (user and project)
+
+SAVE CONTENER ONLINE
+docker push budal/hello
+send contener to dockerhub
+
+SAVE CONTENER IN COMPUTER FILE:
+docker save picsou/ubuntu14.04 > /tmp/mynewimage.tar
+user/name > file location/name of the archive file (.tar)
+
+LOAD CONTENER FROM COMPUTER FILE:
+docker load < /tmp/mynewimage.tar
+
+STOP DOCKER:
+docker stop contener id
+
+SEE ENV:
+env
+
+CHANGE ENV
+export new environment like DEBIAN_FRONTEND=noninteractive
 
 IF ERROR:
 ERRO[0000] failed to dial gRPC: cannot connect to the Docker daemon. Is 'docker daemon' running on this host?: dial unix /var/run/docker.sock: connect: permission denied
@@ -35,4 +88,4 @@ OR
 sudo usermod -a -G docker 'username'
 
 BECAUSE:
-it means that the user doesn't have the rights to exevute the command. Either sudo promotes you to toot admin or the other line adds you to the docker group
+it means that the user doesn't have the rights to execute the command. Either sudo promotes you to admin or the other line adds you to the docker group

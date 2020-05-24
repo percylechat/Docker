@@ -1,1 +1,1 @@
-sudo docker build -t hello .
+sudo docker build -t budal/hello .
