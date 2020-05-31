@@ -14,9 +14,8 @@ FROM debian:buster
 ## unzip install a zipper
 ## lsb-release gnupg needed for mysql
 ## sudo is user manager
-## systemd is task manager
 
-RUN DEBIAN_FRONTEND=noninteractive apt-get -y update && apt-get -y upgrade && apt-get -y dist-upgrade && apt-get -y install nginx wordpress php wget unzip lsb-release gnupg sudo systemd
+RUN DEBIAN_FRONTEND=noninteractive apt-get -y update && apt-get -y upgrade && apt-get -y dist-upgrade && apt-get -y install nginx wordpress php wget unzip lsb-release gnupg sudo
 
 ## download mysql from internet
 
@@ -48,8 +47,12 @@ RUN echo "CREATE DATABASE wordpress_db;" > /script/init_mysql_wpdb.sql
 ## pretends to be mysql user and start server in background
 RUN echo "#!/bin/bash\nsudo -u mysql /usr/sbin/mysqld &>/dev/null" > /script/run.sh && chmod +x /script/run.sh
 
+RUN echo "echo \"before wait\"" >> /script/run.sh
+
+RUN echo "while ! mysqladmin ping -h localhost -u root; do\n    sleep 1\n    echo \"Wait\"\ndone\n" >> /script/run.sh
+
 ## database creation put in a script, launched as user mysql in root. Will go on when docker is run
-RUN echo "mysql -u root < /script/init_mysql_wpdb.sql" >> /script/run.sh
+RUN echo "mysql -u root < /script/init_mysql_wpdb.sql &" >> /script/run.sh
 
 
 ##END: configure and download systemctl to make sure that interupted processes can be restarted automatically
