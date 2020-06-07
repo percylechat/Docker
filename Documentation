@@ -18,6 +18,9 @@ docker build -t "name" .
 SEE IMAGES
 (sudo) docker images
 
+DESTROY CONTENER
+docker rm "id"
+
 DESTROY IMAGE:
 docker rmi -f hello
 rmi: remove image name of image

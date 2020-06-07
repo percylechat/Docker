@@ -1,0 +1,35 @@
+CONNECT
+mysql
+
+SEE DATABASE
+show database;
+
+crer user wordpress_user
+mettre mdp wordpress user
+changer droits wordpress_user pour lui donner tous les droits sur la bdd wordpress_db
+
+CHECK version
+mysql -v
+
+CHANGE ROOT PASSWORD
+UPDATE mysql.user SET authentication_string=null WHERE User='root';
+FLUSH PRIVILEGES;
+exit;
+mysql -u root
+ALTER USER 'root'@'localhost' IDENTIFIED WITH caching_sha2_password BY 'yourpasswd';
+-> first you change the root psw to nothing, and flush privileges destroys root roles. Then you connect and change the root psw to your whim.
+
+CREATE USER
+CREATE USER 'username'@'place' IDENTIFIED BY 'passwd';
+
+CHECK USERS
+SELECT user FROM mysql.user;
+
+GRANT PRIVILEGES ON DB
+GRANT ALL ON 'db_name'.* TO 'user'@'place';
+
+SEE PRIVILEGES
+SHOW GRANTS;
+see current user GRANTS
+SHOW GRANTS FOR 'user'@'place';
+show all grants for a specific user

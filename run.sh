@@ -1,1 +1,2 @@
-sudo docker build -t budal/hello .
+docker rm percy
+docker run -tid --name percy budal/hello /script/run.sh
