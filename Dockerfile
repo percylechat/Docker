@@ -61,6 +61,7 @@ RUN echo "while ! mysqladmin ping -h localhost -u root; do\n    sleep 1\ndone\n"
 
 ## database creation put in a script, launched as user mysql in root. Will go on when docker is run
 RUN echo "mysql -u root < /script/config_mysql.sql" >> /script/run.sh
+# a commenter par bulle qui prefere les chiens
 RUN echo "pkill mysqld" >> /script/run.sh
 
 RUN bash /script/run.sh
