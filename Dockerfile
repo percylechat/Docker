@@ -57,7 +57,7 @@ RUN echo "mysql -u root < /script/init_mysql_wpdb.sql" >> /script/run.sh
 
 RUN bash /script/run.sh 
 
-RUN echo "#!/bin/bash\nsudo -u mysql /usr/sbin/mysqld" > /script/run.sh && chmod +x /script/run.sh
+RUN echo "#!/bin/bash\nsudo -u mysql /usr/sbin/mysqld > /dev/null 2>&1" > /script/run.sh && chmod +x /script/run.sh
 
 ##END: configure and download systemctl to make sure that interupted processes can be restarted automatically
 
