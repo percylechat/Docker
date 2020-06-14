@@ -17,6 +17,9 @@ FROM debian:buster
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get -y update && apt-get -y upgrade && apt-get -y dist-upgrade && apt-get -y install nginx wordpress php wget unzip lsb-release gnupg sudo
 
+## remove and purge apache2 so nginx can take its place
+RUN DEBIAN_FRONTEND=noninteractive apt-get -y remove apache2 && apt-get -y purge apache2
+
 ## download mysql from internet
 
 RUN wget http://repo.mysql.com/mysql-apt-config_0.8.13-1_all.deb
@@ -50,25 +53,26 @@ RUN echo "ALTER USER 'root'@'localhost' IDENTIFIED WITH caching_sha2_password BY
 
 ## WARNING to be done at the end of mysql configurations
 ## #!bin/bash is shebang which helps computer to understand that this is not a binary file and to use bin/bash to execute sc script
-## create a script repository and a run.sh executable file to exec command and start processes
+## create a script repository and a install.sh executable file to exec command and start processes
 ## pretends to be mysql user and start server in background
-RUN echo "#!/bin/bash\nsudo -u mysql /usr/sbin/mysqld & > /dev/null 2>&1" > /script/run.sh && chmod +x /script/run.sh
+RUN echo "#!/bin/bash\nsudo -u mysql /usr/sbin/mysqld & > /dev/null 2>&1" > /script/install.sh && chmod +x /script/install.sh
 
 
-#RUN echo "echo \"before wait\"" >> /script/run.sh
+#RUN echo "echo \"before wait\"" >> /script/install.sh
 
-RUN echo "while ! mysqladmin ping -h localhost -u root; do\n    sleep 1\ndone\n" >> /script/run.sh
+RUN echo "while ! mysqladmin ping -h localhost -u root; do\n    sleep 1\ndone\n" >> /script/install.sh
 
 ## database creation put in a script, launched as user mysql in root. Will go on when docker is run
-RUN echo "mysql -u root < /script/config_mysql.sql" >> /script/run.sh
-# a commenter par bulle qui prefere les chiens
-RUN echo "pkill mysqld" >> /script/run.sh
+RUN echo "mysql -u root < /script/config_mysql.sql" >> /script/install.sh
 
-RUN bash /script/run.sh
+# kill server so it can be set up
+RUN echo "pkill mysqld" >> /script/install.sh
 
-RUN echo "#!/bin/bash\nsudo -u mysql /usr/sbin/mysqld" > /script/run.sh && chmod +x /script/run.sh
-RUN echo "echo 'toto'" >> /script/run.sh && chmod +x /script/run.sh
+RUN bash /script/install.sh
 
+RUN echo "#!/bin/bash\n nginx&" > /script/run.sh
+
+RUN echo "sudo -u mysql /usr/sbin/mysqld" >> /script/run.sh && chmod +x /script/run.sh
 
 ##END: configure and download systemctl to make sure that interupted processes can be restarted automatically
 
