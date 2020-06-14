@@ -14,8 +14,10 @@ FROM debian:buster
 ## unzip install a zipper
 ## lsb-release gnupg needed for mysql
 ## sudo is user manager
+## see php doc
+## procps enables pkill command
 
-RUN DEBIAN_FRONTEND=noninteractive apt-get -y update && apt-get -y upgrade && apt-get -y dist-upgrade && apt-get -y install nginx wordpress php wget unzip lsb-release gnupg sudo
+RUN DEBIAN_FRONTEND=noninteractive apt-get -y update && apt-get -y upgrade && apt-get -y dist-upgrade && apt-get -y install nginx wordpress php wget unzip lsb-release gnupg sudo php-fpm php-mysql procps
 
 ## remove and purge apache2 so nginx can take its place
 RUN DEBIAN_FRONTEND=noninteractive apt-get -y remove apache2 && apt-get -y purge apache2
@@ -57,7 +59,6 @@ RUN echo "ALTER USER 'root'@'localhost' IDENTIFIED WITH caching_sha2_password BY
 ## pretends to be mysql user and start server in background
 RUN echo "#!/bin/bash\nsudo -u mysql /usr/sbin/mysqld & > /dev/null 2>&1" > /script/install.sh && chmod +x /script/install.sh
 
-
 #RUN echo "echo \"before wait\"" >> /script/install.sh
 
 RUN echo "while ! mysqladmin ping -h localhost -u root; do\n    sleep 1\ndone\n" >> /script/install.sh
@@ -70,7 +71,25 @@ RUN echo "pkill mysqld" >> /script/install.sh
 
 RUN bash /script/install.sh
 
-RUN echo "#!/bin/bash\n nginx&" > /script/run.sh
+##replace the way php fmp interprets fils so that it won't run the neareast php file if the one searched isn't found. Helps with security in case someone tries to send a php script.
+## WARNING, path is absolute until next php version which could change the version and thus the path name
+RUN sed -i 's/;cgi.fix_pathinfo=1/cgi.fix_pathinfo=0/g' /etc/php/7.3/fpm/php.ini
+
+# start cgi manager of php for nginx so previous changes are applied
+RUN echo "#!/bin/bash\n/etc/init.d/php7.3-fpm start &"> /script/run.sh
+
+## tells nginx to take into account an index.php file for display
+RUN sed -i 's/index index.html index.htm index.nginx-debian.html;/index index.php index.html index.htm index.nginx-debian.html;/g' /etc/nginx/sites-available/default
+
+## First delete useless lines, then tells nginx to process php files through php fpm and also forbids the display of ht files (containing rights and passwords!)
+RUN sed -i '53,94d' /etc/nginx/sites-available/default
+RUN echo "location ~ \.php$ {include snippets/fastcgi-php.conf;fastcgi_pass unix:/run/php/php7.3-fpm.sock;}location ~ /\.ht {deny all;}}" >> /etc/nginx/sites-available/default
+
+## first rename old index file so it's not taken into account, then create a new index.php file that will be displayed
+RUN mv /var/www/html/index.nginx-debian.html /var/www/html/old-index.nginx-debian.html
+RUN echo "<?php \n echo\"bonjour bebe chat \n\"; \n ?>" > /var/www/html/index.php
+
+RUN echo "nginx &" >> /script/run.sh
 
 RUN echo "sudo -u mysql /usr/sbin/mysqld" >> /script/run.sh && chmod +x /script/run.sh
 

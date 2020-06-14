@@ -1,0 +1,5 @@
+WARNING
+php is programming language
+phpmysdmin is app that helps manage databases woth php
+php fpm is php processing app that will help nginx interpret php faster and more efficiently
+php mysql is a driver so php can interact with the mysql database(wordpress needs it)
