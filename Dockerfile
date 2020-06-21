@@ -16,8 +16,9 @@ FROM debian:buster
 ## sudo is user manager
 ## see php doc
 ## procps enables pkill command
+## curl to install wpcli
 
-RUN DEBIAN_FRONTEND=noninteractive apt-get -y update && apt-get -y upgrade && apt-get -y dist-upgrade && apt-get -y install nginx wordpress php wget unzip lsb-release gnupg sudo php-fpm php-mysql procps
+RUN DEBIAN_FRONTEND=noninteractive apt-get -y update && apt-get -y upgrade && apt-get -y dist-upgrade && apt-get -y install nginx php wget unzip lsb-release gnupg sudo php-fpm php-mysql procps curl
 
 ## remove and purge apache2 so nginx can take its place
 RUN DEBIAN_FRONTEND=noninteractive apt-get -y remove apache2 && apt-get -y purge apache2
@@ -47,11 +48,13 @@ RUN mkdir /script
 RUN echo "CREATE DATABASE wordpress_db;" > /script/config_mysql.sql
 
 ##set password for root, create user for wp database and grants rights
+##last line to resolve conflict with wordpress/mysql/php versions
 RUN echo "CREATE USER 'wp_user'@'localhost' IDENTIFIED BY 'bebechat';" >> /script/config_mysql.sql
 RUN echo "GRANT ALL PRIVILEGES ON wordpress_db.* TO 'wp_user'@'localhost';" >> /script/config_mysql.sql
 RUN echo "UPDATE mysql.user SET authentication_string=null WHERE User='root';" >> /script/config_mysql.sql
 RUN echo "FLUSH PRIVILEGES;" >> /script/config_mysql.sql
 RUN echo "ALTER USER 'root'@'localhost' IDENTIFIED WITH caching_sha2_password BY 'bebechat';" >> /script/config_mysql.sql
+RUN echo "ALTER USER 'wp_user'@'localhost' IDENTIFIED WITH mysql_native_password BY 'bebechat';" >> /script/config_mysql.sql
 
 ## WARNING to be done at the end of mysql configurations
 ## #!bin/bash is shebang which helps computer to understand that this is not a binary file and to use bin/bash to execute sc script
@@ -66,7 +69,19 @@ RUN echo "while ! mysqladmin ping -h localhost -u root; do\n    sleep 1\ndone\n"
 ## database creation put in a script, launched as user mysql in root. Will go on when docker is run
 RUN echo "mysql -u root < /script/config_mysql.sql" >> /script/install.sh
 
-# kill server so it can be set up
+#download wordpress
+##RUN wget -P /var/www/html/ https://wordpress.org/latest.tar.gz && tar -xvzf /var/www/html/latest.tar.gz -C /var/www/html/
+##RUN rm /var/www/html/latest.tar.gz
+
+RUN echo "curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar && chmod +x wp-cli.phar && mv wp-cli.phar /usr/local/bin/wp" >> /script/install.sh
+
+RUN echo "cd /var/www/html && mkdir wordpress && cd wordpress && wp --allow-root core download " >> /script/install.sh
+
+RUN echo "cd /var/www/html/wordpress && wp --allow-root core config --dbname=wordpress_db --dbuser=wp_user --dbpass=bebechat " >> /script/install.sh
+
+RUN echo "cd /var/www/html/wordpress && wp --allow-root core install --url=http://127.0.0.1/wordpress --title=WordPress --admin_user=admin --admin_password=bebechat --admin_email=adminwp@yopmail.com " >> /script/install.sh
+
+## kill server so it can be set up
 RUN echo "pkill mysqld" >> /script/install.sh
 
 RUN bash /script/install.sh
@@ -87,7 +102,8 @@ RUN echo "location ~ \.php$ {include snippets/fastcgi-php.conf;fastcgi_pass unix
 
 ## first rename old index file so it's not taken into account, then create a new index.php file that will be displayed
 RUN mv /var/www/html/index.nginx-debian.html /var/www/html/old-index.nginx-debian.html
-RUN echo "<?php \n echo\"bonjour bebe chat \n\"; \n ?>" > /var/www/html/index.php
+
+## FAKE HELLO RUN echo "<?php \n echo\"bonjour bebe chat \n\"; \n ?>" > /var/www/html/index.php
 
 RUN echo "nginx &" >> /script/run.sh
 
