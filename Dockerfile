@@ -79,7 +79,7 @@ RUN echo "cd /var/www/html && mkdir wordpress && cd wordpress && wp --allow-root
 
 RUN echo "cd /var/www/html/wordpress && wp --allow-root core config --dbname=wordpress_db --dbuser=wp_user --dbpass=bebechat " >> /script/install.sh
 
-RUN echo "cd /var/www/html/wordpress && wp --allow-root core install --url=http://127.0.0.1/wordpress --title=WordPress --admin_user=admin --admin_password=bebechat --admin_email=adminwp@yopmail.com " >> /script/install.sh
+RUN echo "cd /var/www/html/wordpress && wp --allow-root core install --url=http://127.0.0.1/wordpress/ --title=WordPress --admin_user=admin --admin_password=bebechat --admin_email=adminwp@yopmail.com " >> /script/install.sh
 
 ## kill server so it can be set up
 RUN echo "pkill mysqld" >> /script/install.sh
