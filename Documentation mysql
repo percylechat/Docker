@@ -2,7 +2,7 @@ CONNECT
 mysql
 
 SEE DATABASE
-show database;
+show databases;
 
 crer user wordpress_user
 mettre mdp wordpress user

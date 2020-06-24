@@ -1,6 +1,5 @@
 ## debian is an official account of docker on dockerhub, buster is the name
 ## of the latest version (10)
-
 FROM debian:buster
 
 ## run execute commands
@@ -17,14 +16,12 @@ FROM debian:buster
 ## see php doc
 ## procps enables pkill command
 ## curl to install wpcli
-
 RUN DEBIAN_FRONTEND=noninteractive apt-get -y update && apt-get -y upgrade && apt-get -y dist-upgrade && apt-get -y install nginx php wget unzip lsb-release gnupg sudo php-fpm php-mysql procps curl
 
 ## remove and purge apache2 so nginx can take its place
 RUN DEBIAN_FRONTEND=noninteractive apt-get -y remove apache2 && apt-get -y purge apache2
 
 ## download mysql from internet
-
 RUN wget http://repo.mysql.com/mysql-apt-config_0.8.13-1_all.deb
 
 ## need to change environnement again because changes back for each command
@@ -35,7 +32,7 @@ RUN DEBIAN_FRONTEND=noninteractive dpkg -i mysql-apt-config_0.8.13-1_all.deb
 ## remove deb file to clean
 RUN rm mysql-apt-config_0.8.13-1_all.deb
 
-##upgrade once again to include mysql installation servers
+## upgrade once again to include mysql installation servers
 RUN apt-get update
 
 ## install servers for mysql
@@ -47,8 +44,8 @@ RUN mkdir /script
 ## create database for mysql users
 RUN echo "CREATE DATABASE wordpress_db;" > /script/config_mysql.sql
 
-##set password for root, create user for wp database and grants rights
-##last line to resolve conflict with wordpress/mysql/php versions
+## set password for root, create user for wp database and grants rights
+## last line to resolve conflict with wordpress/mysql/php versions
 RUN echo "CREATE USER 'wp_user'@'localhost' IDENTIFIED BY 'bebechat';" >> /script/config_mysql.sql
 RUN echo "GRANT ALL PRIVILEGES ON wordpress_db.* TO 'wp_user'@'localhost';" >> /script/config_mysql.sql
 RUN echo "UPDATE mysql.user SET authentication_string=null WHERE User='root';" >> /script/config_mysql.sql
@@ -61,42 +58,45 @@ RUN echo "ALTER USER 'wp_user'@'localhost' IDENTIFIED WITH mysql_native_password
 ## create a script repository and a install.sh executable file to exec command and start processes
 ## pretends to be mysql user and start server in background
 RUN echo "#!/bin/bash\nsudo -u mysql /usr/sbin/mysqld & > /dev/null 2>&1" > /script/install.sh && chmod +x /script/install.sh
-
-#RUN echo "echo \"before wait\"" >> /script/install.sh
-
 RUN echo "while ! mysqladmin ping -h localhost -u root; do\n    sleep 1\ndone\n" >> /script/install.sh
 
 ## database creation put in a script, launched as user mysql in root. Will go on when docker is run
 RUN echo "mysql -u root < /script/config_mysql.sql" >> /script/install.sh
 
-#download wordpress
-##RUN wget -P /var/www/html/ https://wordpress.org/latest.tar.gz && tar -xvzf /var/www/html/latest.tar.gz -C /var/www/html/
-##RUN rm /var/www/html/latest.tar.gz
-
+## install and configure wordpress throught automated script called wpcli. standatrd use would include downloading the wp tar file and manually modifying values in cinfig files thanks to grep and such
 RUN echo "curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar && chmod +x wp-cli.phar && mv wp-cli.phar /usr/local/bin/wp" >> /script/install.sh
-
 RUN echo "cd /var/www/html && mkdir wordpress && cd wordpress && wp --allow-root core download " >> /script/install.sh
-
 RUN echo "cd /var/www/html/wordpress && wp --allow-root core config --dbname=wordpress_db --dbuser=wp_user --dbpass=bebechat " >> /script/install.sh
-
 RUN echo "cd /var/www/html/wordpress && wp --allow-root core install --url=http://127.0.0.1/wordpress/ --title=WordPress --admin_user=admin --admin_password=bebechat --admin_email=adminwp@yopmail.com " >> /script/install.sh
+
+## download phpmyadmin, unzip, remove archive and rename directory
+RUN echo "cd /var/www/html/ && wget https://files.phpmyadmin.net/phpMyAdmin/5.0.2/phpMyAdmin-5.0.2-english.tar.gz && tar -xvzf phpMyAdmin-5.0.2-english.tar.gz && rm phpMyAdmin-5.0.2-english.tar.gz && mv phpMyAdmin-5.0.2-english phpmyadmin">> /script/install.sh
+
+RUN echo "cd /var/www/html/phpmyadmin && mv config.sample.inc.php config.inc.php && ">> /script/install.sh
+
+##RUN echo "sed -i 's/\[\'blowfish_secret\'\] = \'\';/\[\'blowfish_secret\'\] = \'JRKZd540Jiox10kPgA4GD6GZYT16HFD6\';/g' /var/www/html/phpmyadmin/config.inc.php ">> /script/install.sh
+##sed -i "s+$cfg['blowfish_secret'] = ''+$cfg['blowfish_secret'] = 'JRKZd540Jiox10kPgA4GD6GZYT16HFD6';+" /var/www/html/phpmyadmin/config.inc.php
+##sed -e '18d' config.inc.php
+##awk 'NR==13{print "$cfg['blowfish_secret'] = 'JRKZd540Jiox10àPgA4GD6GZYT16HFD6';"}1' a.txt
+
+##RUN echo "">> /script/install.sh
 
 ## kill server so it can be set up
 RUN echo "pkill mysqld" >> /script/install.sh
 
 RUN bash /script/install.sh
 
-##replace the way php fmp interprets fils so that it won't run the neareast php file if the one searched isn't found. Helps with security in case someone tries to send a php script.
+## replace the way php fmp interprets fils so that it won't run the neareast php file if the one searched isn't found. Helps with security in case someone tries to send a php script.
 ## WARNING, path is absolute until next php version which could change the version and thus the path name
 RUN sed -i 's/;cgi.fix_pathinfo=1/cgi.fix_pathinfo=0/g' /etc/php/7.3/fpm/php.ini
 
-# start cgi manager of php for nginx so previous changes are applied
+## start cgi manager of php for nginx so previous changes are applied
 RUN echo "#!/bin/bash\n/etc/init.d/php7.3-fpm start &"> /script/run.sh
 
 ## tells nginx to take into account an index.php file for display
 RUN sed -i 's/index index.html index.htm index.nginx-debian.html;/index index.php index.html index.htm index.nginx-debian.html;/g' /etc/nginx/sites-available/default
 
-## First delete useless lines, then tells nginx to process php files through php fpm and also forbids the display of ht files (containing rights and passwords!)
+## first delete useless lines, then tells nginx to process php files through php fpm and also forbids the display of ht files (containing rights and passwords!)
 RUN sed -i '53,94d' /etc/nginx/sites-available/default
 RUN echo "location ~ \.php$ {include snippets/fastcgi-php.conf;fastcgi_pass unix:/run/php/php7.3-fpm.sock;}location ~ /\.ht {deny all;}}" >> /etc/nginx/sites-available/default
 
@@ -109,6 +109,6 @@ RUN echo "nginx &" >> /script/run.sh
 
 RUN echo "sudo -u mysql /usr/sbin/mysqld" >> /script/run.sh && chmod +x /script/run.sh
 
-##END: configure and download systemctl to make sure that interupted processes can be restarted automatically
+## END: configure and download systemctl to make sure that interupted processes can be restarted automatically
 
 ## WARNING, passwords will be defined as env variables in user computer. SO need to define them before building docker!
