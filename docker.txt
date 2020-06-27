@@ -1,3 +1,12 @@
+##definir mdp a partir de variable d'environnement qu on mpasse au dockerhub
+ARG password1
+RUN echo $password1
+inclure dans build
+--build-arg password1=toto
+
+## copy file from machine into the container
+COPY percy.txt /script
+
 ###installation :
 curl -sSL https://get.docker.com/ubuntu/ | sudo sh
 

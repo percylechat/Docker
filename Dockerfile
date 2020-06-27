@@ -67,17 +67,14 @@ RUN echo "mysql -u root < /script/config_mysql.sql" >> /script/install.sh
 RUN echo "curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar && chmod +x wp-cli.phar && mv wp-cli.phar /usr/local/bin/wp" >> /script/install.sh
 RUN echo "cd /var/www/html && mkdir wordpress && cd wordpress && wp --allow-root core download " >> /script/install.sh
 RUN echo "cd /var/www/html/wordpress && wp --allow-root core config --dbname=wordpress_db --dbuser=wp_user --dbpass=bebechat " >> /script/install.sh
-RUN echo "cd /var/www/html/wordpress && wp --allow-root core install --url=http://127.0.0.1/wordpress/ --title=WordPress --admin_user=admin --admin_password=bebechat --admin_email=adminwp@yopmail.com " >> /script/install.sh
+RUN echo "cd /var/www/html/wordpress && wp --allow-root core install --url=https://127.0.0.1/wordpress/ --title=WordPress --admin_user=admin --admin_password=bebechat --admin_email=adminwp@yopmail.com " >> /script/install.sh
 
 ## download phpmyadmin, unzip, remove archive and rename directory
 RUN echo "cd /var/www/html/ && wget https://files.phpmyadmin.net/phpMyAdmin/5.0.2/phpMyAdmin-5.0.2-english.tar.gz && tar -xvzf phpMyAdmin-5.0.2-english.tar.gz && rm phpMyAdmin-5.0.2-english.tar.gz && mv phpMyAdmin-5.0.2-english phpmyadmin">> /script/install.sh
 
+## create config file with a blowfish encryption key
 RUN echo "cd /var/www/html/phpmyadmin && mv config.sample.inc.php config.inc.php && ">> /script/install.sh
-
-##RUN echo "sed -i 's/\[\'blowfish_secret\'\] = \'\';/\[\'blowfish_secret\'\] = \'JRKZd540Jiox10kPgA4GD6GZYT16HFD6\';/g' /var/www/html/phpmyadmin/config.inc.php ">> /script/install.sh
-##sed -i "s+$cfg['blowfish_secret'] = ''+$cfg['blowfish_secret'] = 'JRKZd540Jiox10kPgA4GD6GZYT16HFD6';+" /var/www/html/phpmyadmin/config.inc.php
-##sed -e '18d' config.inc.php
-##awk 'NR==13{print "$cfg['blowfish_secret'] = 'JRKZd540Jiox10àPgA4GD6GZYT16HFD6';"}1' a.txt
+RUN echo "sed -i \"s/\['blowfish_secret'\] = ''/\['blowfish_secret'\] = 'fHYA58Vfa1n7sj3kSKBR5Lmh502htSTN'/\" /var/www/html/phpmyadmin/config.inc.php">> /script/install.sh
 
 ##RUN echo "">> /script/install.sh
 
@@ -98,17 +95,33 @@ RUN sed -i 's/index index.html index.htm index.nginx-debian.html;/index index.ph
 
 ## first delete useless lines, then tells nginx to process php files through php fpm and also forbids the display of ht files (containing rights and passwords!)
 RUN sed -i '53,94d' /etc/nginx/sites-available/default
-RUN echo "location ~ \.php$ {include snippets/fastcgi-php.conf;fastcgi_pass unix:/run/php/php7.3-fpm.sock;}location ~ /\.ht {deny all;}}" >> /etc/nginx/sites-available/default
+RUN echo "location ~ \.php$ {\n\tinclude snippets/fastcgi-php.conf;\n\tfastcgi_pass unix:/run/php/php7.3-fpm.sock;\n}\nlocation ~ /\.ht {\n\tdeny all;\n}\n}" >> /etc/nginx/sites-available/default
+RUN sed -i 's/server_name _;/server_name localhost;/g' /etc/nginx/sites-available/default
 
-## first rename old index file so it's not taken into account, then create a new index.php file that will be displayed
+## generate ssl certificate and keys
+RUN printf 'FR\ncastle\nchair\nbabt\ntest\nhelp\nend\n' | openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/nginx-selfsigned.key -out /etc/ssl/certs/nginx-selfsigned.crt
+
+## create Diffie-Hellman group
+RUN openssl dhparam -out /etc/ssl/certs/dhparam.pem 4096
+
+## confing nginx with ssl
+RUN echo "ssl_certificate /etc/ssl/certs/nginx-selfsigned.crt;" > /etc/nginx/snippets/self-signed.conf
+RUN echo "ssl_certificate_key /etc/ssl/private/nginx-selfsigned.key;" >> /etc/nginx/snippets/self-signed.conf
+RUN echo "ssl_protocols TLSv1 TLSv1.1 TLSv1.2;ssl_prefer_server_ciphers on;ssl_ciphers \"EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH\";ssl_ecdh_curve secp384r1;ssl_session_cache shared:SSL:10m;ssl_session_tickets off;ssl_stapling off;ssl_stapling_verify on;resolver 8.8.8.8 8.8.4.4 valid=300s;resolver_timeout 5s;add_header Strict-Transport-Security \"max-age=63072000; includeSubdomains\";add_header X-Frame-Options DENY;add_header X-Content-Type-Options nosniff;ssl_dhparam /etc/ssl/certs/dhparam.pem;" > /etc/nginx/snippets/ssl-params.conf
+RUN cd /etc/nginx/sites-available/ && sed -i 's/\# listen/listen/g' default && sed -i '22,23d' default && sed -i '26a\ include snippets/self-signed.conf;' default && sed -i '27a\include snippets/ssl-params.conf; ' default
+RUN echo "server{\n \tlisten 80;\n\tlisten [::]:80;\n\tserver_name localhost;\n\treturn 301 https://\$server_name\$request_uri;\n}" >> /etc/nginx/sites-available/default
+
+## rename old index file so it's not taken into account
 RUN mv /var/www/html/index.nginx-debian.html /var/www/html/old-index.nginx-debian.html
 
-## FAKE HELLO RUN echo "<?php \n echo\"bonjour bebe chat \n\"; \n ?>" > /var/www/html/index.php
+##create index.html for convenienty
+RUN cd /var/www/html && touch index.html
+RUN echo "<html><body><p><a href="/wordpress">Wordpress</a></p><p><a href="/phpmyadmin">Phpmyadmin</a></p></body></html>" >> /var/www/html/index.html
 
 RUN echo "nginx &" >> /script/run.sh
 
 RUN echo "sudo -u mysql /usr/sbin/mysqld" >> /script/run.sh && chmod +x /script/run.sh
 
-## END: configure and download systemctl to make sure that interupted processes can be restarted automatically
+## END: configure and download systemctl to make sure that interrupted processes can be restarted automatically
 
 ## WARNING, passwords will be defined as env variables in user computer. SO need to define them before building docker!
